@@ -76,23 +76,6 @@ export default function App() {
     return buckets.map((c,i)=>({ name: (min + i*w).toFixed(1), count: c }));
   }
 
-  function buildPayloadFromRow(row) {
-    const get = (k) => row[mapping[k]] ?? row[k] ?? null;
-    return {
-      CO2_ppm: get("CO2_ppm"),
-      H2S_ppm: get("H2S_ppm"),
-      pH: get("pH"),
-      temperature_C: get("temperature_C"),
-      flow_m_s: get("flow_m_s"),
-      inhibitor_eff: get("inhibitor_eff"),
-      CP_voltage: get("CP_voltage"),
-      #???: 0
-    };
-  }
-
-  // The above accidental characters break JS — fix: remove the stray line.
-  // (This comment is only for the assistant — the code below is corrected.)
-
   function buildPayloadCorrect(row) {
     return {
       CO2_ppm: row[mapping.CO2_ppm] ?? row.CO2_ppm ?? null,
@@ -121,7 +104,6 @@ export default function App() {
         const data = await resp.json();
         setInference({ from: "backend", ...data });
       } else {
-        // fallback to local heuristic
         const data = await resp.text();
         console.warn("Backend returned error:", data);
         const p = localHeuristic(payload);
@@ -153,6 +135,7 @@ export default function App() {
     risk += 0.8 * (flow < 0.3 ? 1 : 0);
     risk += 1.2 * (inhibitor < 0.3 ? 1 : 0);
     risk += 0.7 * (cpv > -0.6 ? 1 : 0);
+
     const p = 1 / (1 + Math.exp(-(risk - 1.5)));
     return Number(p.toFixed(4));
   }
@@ -169,16 +152,49 @@ export default function App() {
       <div style={{display: 'grid', gridTemplateColumns: '360px 1fr', gap: 16, marginTop: 16}}>
         <div className="card">
           <div style={{display:'flex', gap:8, flexDirection:'column'}} className="controls">
+
+            {/* Upload Section */}
             <div>
               <label className="small">Upload CSV</label>
               <input type="file" accept=".csv" onChange={handleFile} />
+
+              {/* NEW: Dataset Download Block */}
+              <div style={{
+                marginTop: 16,
+                padding: 12,
+                background: "#f1f5f9",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0"
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Sample Dataset</div>
+                <div className="small" style={{ marginBottom: 10 }}>
+                  To test the prototype, download the dataset and upload it above.
+                </div>
+                <a
+                  href="https://raw.githubusercontent.com/mhdalqad-collab/pipe-corrosion/main/corrosion_dataset.csv"
+                  download="corrosion_dataset.csv"
+                  style={{
+                    display: "inline-block",
+                    padding: "8px 14px",
+                    background: "#0284c7",
+                    color: "white",
+                    borderRadius: 6,
+                    textDecoration: "none",
+                    fontWeight: 600
+                  }}
+                >
+                  Download CSV Dataset
+                </a>
+              </div>
             </div>
 
+            {/* Row Selector */}
             <div>
               <label className="small">Row to test</label>
               <input type="number" value={selectedIndex} min={0} max={Math.max(0, rows.length-1)} onChange={(e)=>setSelectedIndex(Number(e.target.value))} />
             </div>
 
+            {/* Column Mapping */}
             <div>
               <label className="small">Column mappings (auto-suggest)</label>
               {["CO2_ppm","H2S_ppm","pH","temperature_C","flow_m_s","inhibitor_eff","CP_voltage"].map(k => (
@@ -202,6 +218,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* RIGHT SIDE */}
         <div style={{display:'grid', gap:12}}>
           <div className="card">
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
