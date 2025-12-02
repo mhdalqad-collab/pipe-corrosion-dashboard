@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pgmpy
+pandas
+numpy
+python-multipart
